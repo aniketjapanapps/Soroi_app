@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>揃い Soroi — Shop Floor Pickup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#faf8f5;--warm:#f5f0ea;--surface:#fff;--surface-hover:#fefcfa;
+  --text:#2c1810;--text-2:#6b5a4e;--text-3:#a39485;--text-4:#c8beb4;
+  --border:#e8e0d8;--border-lt:#f0ebe5;
+  --brand:#c8553d;--brand-dk:#a8432f;--brand-lt:#fdf0ed;--brand-bg:rgba(200,85,61,.06);
+  --cart:#2d7a4f;--cart-dk:#1e5c38;--cart-lt:#edf7f1;--cart-bg:rgba(45,122,79,.08);
+  --miss:#d4842a;--miss-lt:#fdf4e8;
+  --blue:#4a7fb5;--blue-lt:#edf3fa;
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --shadow:0 1px 3px rgba(44,24,16,.06),0 1px 2px rgba(44,24,16,.04);
+  --shadow-md:0 4px 16px rgba(44,24,16,.08);
+  --shadow-lg:0 8px 30px rgba(44,24,16,.12);
+  --font:'Outfit',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html{font-family:var(--font);font-size:15px;color:var(--text);background:var(--cream);-webkit-text-size-adjust:100%}
+body{min-height:100dvh;overflow-x:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+
+/* ── App Shell ────────────────────────────────────── */
+#app{display:flex;flex-direction:column;min-height:100dvh}
+
+/* Header — warm paper bag vibe */
+.hdr{
+  background:var(--brand);color:#fff;
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:100;
+  background-image:linear-gradient(135deg,var(--brand) 0%,#b5472e 100%);
+  box-shadow:0 2px 12px rgba(200,85,61,.25);
+}
+.hdr-back{
+  width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);transition:background .15s;flex-shrink:0;
+}
+.hdr-back:hover{background:rgba(255,255,255,.15)}
+.hdr-back svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-body{flex:1;min-width:0}
+.hdr-title{font-weight:700;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-sub{font-size:.72rem;opacity:.7;margin-top:1px}
+.hdr-user{
+  display:flex;align-items:center;gap:6px;flex-shrink:0;
+}
+.hdr-avatar{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.3)}
+.hdr-name{font-size:.78rem;font-weight:500;opacity:.85;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.content{flex:1;padding:16px;padding-bottom:calc(20px + var(--safe-b))}
+
+/* ── Login ────────────────────────────────────────── */
+.login{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100dvh;padding:32px 24px;text-align:center;
+  background:linear-gradient(170deg,var(--cream) 0%,#f0e8dd 100%);
+}
+.login-bag{
+  width:88px;height:88px;border-radius:24px;margin-bottom:22px;
+  background:var(--brand);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 36px rgba(200,85,61,.3);
+  position:relative;overflow:hidden;
+}
+.login-bag::after{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.12) 100%);
+}
+.login-bag svg{width:42px;height:42px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;position:relative;z-index:1}
+.login-brand{font-size:2rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:2px}
+.login-brand span{color:var(--brand)}
+.login-jp{font-size:.88rem;color:var(--text-3);margin-bottom:6px;font-weight:500}
+.login-sub{font-size:.85rem;color:var(--text-3);margin-bottom:28px;line-height:1.5}
+.login-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--surface);color:var(--text);font-weight:600;font-size:.95rem;
+  padding:13px 32px;border-radius:var(--r);
+  box-shadow:var(--shadow-md);border:1.5px solid var(--border);
+  transition:transform .12s,box-shadow .12s;
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.login-btn svg{width:20px;height:20px}
+.login-error{color:var(--brand);margin-top:14px;font-size:.85rem;display:none;white-space:pre-line}
+
+/* ── Cards & Grids ────────────────────────────────── */
+.section-title{font-size:1.15rem;font-weight:700;margin-bottom:4px;letter-spacing:-.01em}
+.section-sub{font-size:.82rem;color:var(--text-2);margin-bottom:16px}
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{
+  background:var(--surface);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--shadow);
+  border:1.5px solid var(--border-lt);
+  display:flex;align-items:center;gap:12px;
+  transition:transform .1s,box-shadow .1s;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.card:active{transform:scale(.985);box-shadow:none}
+.card-ico{
+  width:44px;height:44px;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:1.4rem;
+}
+.card-body{flex:1;min-width:0}
+.card-name{font-weight:600;font-size:.95rem}
+.card-detail{font-size:.78rem;color:var(--text-3);margin-top:2px}
+.card-arrow{color:var(--text-4)}
+.card-arrow svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.card-all{border:2px dashed var(--brand);background:var(--brand-lt)}
+.card-all .card-ico{background:var(--brand);color:#fff;font-size:1.2rem}
+.card-all .card-name{color:var(--brand)}
+
+/* ── Pickup List ──────────────────────────────────── */
+.meta-bar{
+  display:flex;flex-wrap:wrap;gap:6px 14px;
+  font-size:.78rem;color:var(--text-2);margin-bottom:12px;
+}
+.meta-bar svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:3px}
+
+/* Multiplier */
+.mult-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border-radius:var(--r);
+  padding:10px 14px;margin-bottom:12px;box-shadow:var(--shadow);
+  border:1.5px solid var(--border-lt);
+}
+.mult-bar label{font-size:.82rem;font-weight:600;color:var(--text-2);white-space:nowrap}
+.mult-bar input{
+  width:52px;text-align:center;padding:6px 4px;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-weight:700;font-size:1rem;background:var(--warm);
+}
+.mult-hint{font-size:.72rem;color:var(--text-3);flex:1}
+
+/* Progress — receipt-style */
+.prog-wrap{
+  background:var(--surface);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:12px;box-shadow:var(--shadow);
+  border:1.5px solid var(--border-lt);
+}
+.prog-top{display:flex;justify-content:space-between;font-size:.78rem;color:var(--text-2);margin-bottom:6px;font-weight:500}
+.prog-track{height:7px;background:var(--warm);border-radius:4px;overflow:hidden;position:relative}
+.prog-fill-cart{position:absolute;left:0;top:0;height:100%;background:var(--cart);border-radius:4px;transition:width .3s}
+.prog-fill-miss{position:absolute;top:0;height:100%;background:var(--miss);border-radius:4px;transition:width .3s,left .3s}
+.prog-nums{display:flex;gap:16px;margin-top:8px;font-size:.82rem;font-weight:600}
+.prog-nums .n-cart{color:var(--cart)}
+.prog-nums .n-miss{color:var(--miss)}
+.prog-nums .n-rem{color:var(--text-3)}
+
+/* Filter tabs — shopping category pills */
+.filters{
+  display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.filters::-webkit-scrollbar{display:none}
+.ftab{
+  padding:7px 14px;border-radius:20px;font-size:.8rem;font-weight:600;
+  white-space:nowrap;border:1.5px solid var(--border);color:var(--text-2);
+  background:var(--surface);transition:all .15s;flex-shrink:0;
+}
+.ftab.active{background:var(--text);color:#fff;border-color:var(--text)}
+.ftab .cnt{display:inline-block;margin-left:3px;font-size:.7rem;opacity:.6}
+
+/* Group header — aisle marker */
+.grp{margin-bottom:16px}
+.grp-hdr{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:var(--r-sm);
+  background:var(--warm);border:1.5px solid var(--border-lt);
+  margin-bottom:6px;
+}
+.grp-seq{
+  background:var(--text);color:#fff;
+  font-family:var(--mono);font-size:.7rem;font-weight:600;
+  padding:2px 8px;border-radius:8px;flex-shrink:0;
+}
+.grp-name{font-weight:600;font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp-count{font-size:.75rem;color:var(--text-3);font-weight:500;flex-shrink:0}
+.grp-unit{font-size:.68rem;color:var(--text-4);flex-shrink:0;font-style:italic}
+
+/* Part row — product card */
+.prow{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:10px 12px;background:var(--surface);
+  border-radius:var(--r-sm);margin-bottom:4px;
+  border:1.5px solid var(--border-lt);
+  transition:all .15s;
+}
+.prow.in-cart{background:var(--cart-lt);border-color:#b5dfc4}
+.prow.missing{background:var(--miss-lt);border-color:#f0d9b4}
+.prow.filt-out{display:none}
+
+.prow-btns{display:flex;flex-direction:column;gap:3px;flex-shrink:0;padding-top:1px}
+.pbtn{
+  width:34px;height:28px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .1s;border:1.5px solid var(--border);
+}
+.pbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.pbtn.cart-btn{color:var(--cart)}
+.pbtn.cart-btn:hover,.pbtn.cart-btn.on{background:var(--cart);color:#fff;border-color:var(--cart)}
+.pbtn.miss-btn{color:var(--miss)}
+.pbtn.miss-btn:hover,.pbtn.miss-btn.on{background:var(--miss);color:#fff;border-color:var(--miss)}
+
+.prow-seq{
+  background:var(--brand);color:#fff;
+  font-family:var(--mono);font-size:.66rem;font-weight:600;
+  padding:2px 7px;border-radius:8px;flex-shrink:0;
+  min-width:26px;text-align:center;margin-top:2px;
+}
+.prow-body{flex:1;min-width:0}
+.prow-name{font-weight:600;font-size:.88rem;line-height:1.25}
+.prow-pn{font-size:.72rem;color:var(--text-3);font-family:var(--mono);margin-top:1px}
+.prow-pills{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.pill{font-size:.65rem;font-weight:600;padding:1px 6px;border-radius:6px;white-space:nowrap}
+.pill-f{background:#ede9fe;color:#6d28d9}
+.pill-l{background:#fef3c7;color:#b45309}
+.pill-t{background:var(--blue-lt);color:var(--blue)}
+
+.prow-qty{
+  font-weight:800;font-size:1.05rem;min-width:30px;text-align:center;
+  flex-shrink:0;color:var(--text);padding-top:2px;
+}
+
+.prow-note{
+  width:100%;margin-top:6px;padding:5px 8px;
+  border:1px solid var(--border);border-radius:6px;
+  font-size:.78rem;background:var(--warm);display:none;
+}
+.prow.in-cart .prow-note,.prow.missing .prow-note{display:block}
+
+/* Submit bar — checkout */
+.checkout{
+  position:sticky;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1.5px solid var(--border);
+  padding:12px 16px calc(12px + var(--safe-b));
+  display:flex;gap:10px;z-index:50;
+  box-shadow:0 -4px 16px rgba(44,24,16,.06);
+}
+.ckout-btn{
+  flex:1;padding:13px;border-radius:var(--r);
+  font-weight:700;font-size:.92rem;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.ckout-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ckout-primary{background:var(--cart);color:#fff}
+.ckout-primary:hover{background:var(--cart-dk)}
+.ckout-primary:disabled{background:var(--border);color:var(--text-4);cursor:not-allowed}
+.ckout-secondary{background:var(--warm);color:var(--text-2);border:1.5px solid var(--border)}
+
+/* History */
+.hist-row{
+  background:var(--surface);border-radius:var(--r-sm);
+  padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);border:1.5px solid var(--border-lt);
+}
+.hist-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.hist-unit{font-weight:600;font-size:.9rem}
+.hist-date{font-size:.76rem;color:var(--text-3)}
+.hist-stats{display:flex;gap:12px;font-size:.82rem}
+.hist-stats .s-cart{color:var(--cart);font-weight:600}
+.hist-stats .s-miss{color:var(--miss);font-weight:600}
+
+/* Admin */
+.admin{
+  background:var(--surface);border-radius:var(--r);
+  padding:16px;margin-top:20px;box-shadow:var(--shadow);border:1.5px solid var(--border-lt);
+}
+.admin h3{font-size:.88rem;font-weight:700;margin-bottom:10px;color:var(--text-2)}
+.abtn{
+  padding:7px 14px;border-radius:var(--r-sm);font-size:.8rem;font-weight:600;
+  background:var(--warm);border:1.5px solid var(--border);
+  margin-right:6px;margin-bottom:6px;
+}
+.abtn:hover{background:var(--border)}
+.abtn.danger{border-color:var(--brand);color:var(--brand)}
+.admin-note{font-size:.75rem;color:var(--text-3);margin-top:8px}
+
+/* Toast */
+.toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-100px);
+  padding:10px 20px;border-radius:var(--r);font-size:.85rem;font-weight:500;
+  box-shadow:var(--shadow-lg);z-index:1000;max-width:calc(100vw - 32px);text-align:center;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);background:var(--text);color:#fff;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--brand)}
+.toast.ok{background:var(--cart)}
+
+/* Modal */
+.mdl-ov{
+  position:fixed;inset:0;background:rgba(44,24,16,.45);z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.mdl-ov.show{opacity:1;pointer-events:auto}
+.mdl{
+  background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  padding:24px 20px calc(24px + var(--safe-b));width:100%;max-width:480px;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.mdl-ov.show .mdl{transform:translateY(0)}
+.mdl-t{font-weight:700;font-size:1.05rem;margin-bottom:6px}
+.mdl-p{font-size:.88rem;color:var(--text-2);margin-bottom:18px;line-height:1.5}
+.mdl-acts{display:flex;gap:10px}
+.mdl-acts button{flex:1;padding:12px;border-radius:var(--r);font-weight:600;font-size:.9rem}
+.mdl-cancel{background:var(--warm);border:1.5px solid var(--border)}
+.mdl-ok{background:var(--cart);color:#fff}
+.mdl-danger{background:var(--brand);color:#fff}
+
+/* Loading */
+.spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading-c{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px;color:var(--text-3);font-size:.88rem}
+
+/* Utility */
+.hidden{display:none!important}
+.fade{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<div id="modal" class="mdl-ov">
+  <div class="mdl"><div class="mdl-t" id="mt"></div><div class="mdl-p" id="mp"></div><div class="mdl-acts" id="ma"></div></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   揃い SOROI — Shop Floor Pickup
+   Single-file HTML · Supabase Auth + GIS Sheets
+   ═══════════════════════════════════════════════════════ */
+
+// ── Config ───────────────────────────────────────────
+const SB_URL='https://wylxvmkcrexwfpjpbhyy.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';
+
+// GIS (Google Identity Services) for Sheets API — same client as Part Inventory
+const GIS_CLIENT_ID='1088099187141-ut0dn0scqt3h99htf3rg8gsrg2oo1ad8.apps.googleusercontent.com';
+const GIS_SCOPES='https://www.googleapis.com/auth/spreadsheets';
+
+const T={
+  ROLES:'authentication_mode_user_roles',
+  ASSEMBLIES:'pickup_assemblies',
+  NODES:'pickup_nodes',
+};
+
+const sb=window.supabase.createClient(SB_URL,SB_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sb-soroi-auth'}
+});
+
+// ── State ────────────────────────────────────────────
+let S={
+  user:null,         // {email,name,role,isAdmin}
+  sheetId:localStorage.getItem('soroi_sheet_id')||'',
+  assemblies:[],
+  selAssembly:null,
+  selUnit:null,      // null = full assembly
+  groups:[],         // [{header,parts,unitName}]
+  picks:{},          // {nodeId:'cart'|'miss'}
+  notes:{},
+  mult:1,
+  filter:'all',
+  view:'loading',    // loading|login|assemblies|units|pickup|history
+  history:JSON.parse(localStorage.getItem('soroi_history')||'[]'),
+  submitting:false,
+  authReady:false,
+};
+
+// GIS token for Sheets
+let gisClient=null;
+let sheetsToken=localStorage.getItem('soroi_sheets_token')||null;
+
+// ── SVG Helpers ──────────────────────────────────────
+const IC={
+  back:'<polyline points="15 18 9 12 15 6"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  chev:'<polyline points="9 18 15 12 9 6"/>',
+  bag:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>',
+  cart:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>',
+  box:'<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  send:'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  user:'<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  db:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+  basket:'<path d="M5.757 1.071a.5.5 0 01.172.686L3.383 6h9.234L10.07 1.757a.5.5 0 01.858-.514L13.783 6H15.5a.5.5 0 01.5.5v1a.5.5 0 01-.5.5H.5a.5.5 0 01-.5-.5v-1A.5.5 0 01.5 6h1.717L5.07 1.243a.5.5 0 01.686-.172zM.878 8l.4 5.6A2 2 0 003.27 15.5h9.46a2 2 0 001.992-1.9l.4-5.6z"/>',
+};
+function svg(n,c=''){return`<svg viewBox="0 0 24 24" class="${c}" xmlns="http://www.w3.org/2000/svg">${IC[n]||''}</svg>`;}
+
+// Google logo (inline)
+const GLOGO='<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>';
+
+// ── Toast & Modal ────────────────────────────────────
+function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast show '+t;clearTimeout(toast._t);toast._t=setTimeout(()=>e.className='toast',2800);}
+function modal(title,text,acts){
+  $('mt').textContent=title;$('mp').textContent=text;
+  const el=$('ma');el.innerHTML='';
+  acts.forEach(a=>{const b=document.createElement('button');b.textContent=a.label;b.className=a.cls||'mdl-cancel';b.onclick=()=>{$('modal').classList.remove('show');a.fn?.();};el.appendChild(b);});
+  $('modal').classList.add('show');
+}
+function $(id){return document.getElementById(id);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Auth: Supabase OAuth (from Axon) ─────────────────
+window.onload=function(){
+  sb.auth.onAuthStateChange(async(ev,session)=>{
+    if(session?.user&&(ev==='SIGNED_IN'||ev==='TOKEN_REFRESHED'||ev==='INITIAL_SESSION')){
+      await checkRole(session.user);S.authReady=true;
+    }else if(ev==='SIGNED_OUT'||(ev==='INITIAL_SESSION'&&!session)){
+      S.user=null;S.authReady=true;nav('login');
+    }
+  });
+  setTimeout(()=>{if(!S.authReady)nav('login');},4000);
+  initGIS();
+};
+
+async function doLogin(){
+  const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
+  if(error){const e=$('login-error');if(e){e.textContent='Login failed: '+error.message;e.style.display='block';}}
+}
+async function doLogout(){
+  await sb.auth.signOut();S.user=null;sheetsToken=null;localStorage.removeItem('soroi_sheets_token');nav('login');
+}
+async function checkRole(u){
+  try{
+    const{data,error}=await sb.from(T.ROLES).select('name,role').eq('email',u.email).single();
+    if(error||!data){
+      // No role entry — allow as guest
+      S.user={email:u.email,name:u.user_metadata?.full_name||u.email.split('@')[0],role:'user',isAdmin:false};
+    }else{
+      S.user={email:u.email,name:data.name||u.email,role:data.role,isAdmin:data.role==='admin'};
+    }
+    nav('assemblies');
+    loadAssemblies();
+  }catch(e){console.error(e);nav('login');}
+}
+
+// ── GIS: Sheets token (from Part Inventory) ──────────
+function initGIS(){
+  if(typeof google==='undefined'||!google?.accounts){setTimeout(initGIS,300);return;}
+  gisClient=google.accounts.oauth2.initTokenClient({
+    client_id:GIS_CLIENT_ID,scope:GIS_SCOPES,
+    callback:r=>{if(r.access_token){sheetsToken=r.access_token;localStorage.setItem('soroi_sheets_token',sheetsToken);}}
+  });
+}
+function gisReAuth(){
+  return new Promise((resolve,reject)=>{
+    if(!gisClient){reject(new Error('GIS not ready'));return;}
+    let done=false;const orig=gisClient.callback;
+    gisClient.callback=r=>{if(done)return;done=true;gisClient.callback=orig;
+      if(r.access_token){sheetsToken=r.access_token;localStorage.setItem('soroi_sheets_token',sheetsToken);resolve();}
+      else reject(new Error('Token fail'));};
+    gisClient.requestAccessToken({prompt:''});
+    setTimeout(()=>{if(!done){done=true;gisClient.callback=orig;reject(new Error('Timeout'));}},12000);
+  });
+}
+async function sheetsApi(url,opts={},retry=false){
+  if(!sheetsToken)sheetsToken=localStorage.getItem('soroi_sheets_token');
+  if(!sheetsToken)throw new Error('NEEDS_GIS_AUTH');
+  const r=await fetch(url,{...opts,headers:{Authorization:'Bearer '+sheetsToken,'Content-Type':'application/json',...(opts.headers||{})}});
+  if(r.status===401&&!retry){try{await gisReAuth();return sheetsApi(url,opts,true);}catch{sheetsToken=null;localStorage.removeItem('soroi_sheets_token');throw new Error('NEEDS_GIS_AUTH');}}
+  if(!r.ok){const t=await r.text();throw new Error(`Sheets ${r.status}: ${t}`);}
+  return r.json();
+}
+function gisRequestToken(){if(gisClient)gisClient.requestAccessToken();else toast('Auth not ready','err');}
+
+// ── Supabase Data ────────────────────────────────────
+async function loadAssemblies(){
+  try{
+    const c=localStorage.getItem('soroi_assemblies');
+    if(c){S.assemblies=JSON.parse(c);render();}
+    const{data,error}=await sb.from(T.ASSEMBLIES).select('*').order('name');
+    if(error)throw error;
+    S.assemblies=data||[];localStorage.setItem('soroi_assemblies',JSON.stringify(S.assemblies));render();
+  }catch(e){console.error(e);if(!S.assemblies.length)toast('Failed to load assemblies','err');}
+}
+async function loadNodes(aid){
+  const ck='soroi_nodes_'+aid;
+  try{
+    const c=localStorage.getItem(ck);if(c)return JSON.parse(c);
+    const{data,error}=await sb.from(T.NODES).select('*').eq('assembly_id',aid).order('sort_order');
+    if(error)throw error;localStorage.setItem(ck,JSON.stringify(data||[]));return data||[];
+  }catch(e){console.error(e);toast('BOM load failed','err');return[];}
+}
+function invalidateCache(aid){
+  localStorage.removeItem('soroi_assemblies');
+  if(aid)localStorage.removeItem('soroi_nodes_'+aid);
+  Object.keys(localStorage).filter(k=>k.startsWith('soroi_nodes_')).forEach(k=>localStorage.removeItem(k));
+}
+
+// ── BOM Tree Logic ───────────────────────────────────
+function buildMap(nodes){const m={};nodes.forEach(n=>{m[n.id]={...n,children:[]};});nodes.forEach(n=>{if(n.parent_id&&m[n.parent_id])m[n.parent_id].children.push(m[n.id]);});return m;}
+function getUnits(nodes){return nodes.filter(n=>n.level===2).sort((a,b)=>a.sort_order-b.sort_order);}
+function leaves(node){if(!node.children?.length)return[node];return node.children.flatMap(c=>leaves(c));}
+function groupsForUnit(nodes,uid){
+  const map=buildMap(nodes),unit=map[uid];if(!unit)return[];
+  return(unit.children||[]).map(c=>c.level===3?{header:c,parts:leaves(c)}:{header:null,parts:[c]});
+}
+function groupsForAll(nodes){
+  const units=getUnits(nodes),map=buildMap(nodes),out=[];
+  units.forEach(u=>{const um=map[u.id];if(!um)return;(um.children||[]).forEach(c=>{
+    out.push(c.level===3?{header:c,parts:leaves(c),unitName:u.name}:{header:null,parts:[c],unitName:u.name});
+  });});return out;
+}
+function countParts(nodes,uid){
+  const map=buildMap(nodes);
+  function desc(n){if(!n.children?.length)return n.level>=4?1:0;return n.children.reduce((s,c)=>s+desc(c),0);}
+  return desc(map[uid]||{children:[]});
+}
+
+// ── Pick State Persistence ───────────────────────────
+function psKey(){return`soroi_ps_${S.selAssembly?.id||'x'}_${S.selUnit?.id||'all'}`;}
+function savePicks(){localStorage.setItem(psKey(),JSON.stringify({p:S.picks,n:S.notes}));}
+function loadPicks(){try{const d=JSON.parse(localStorage.getItem(psKey()));S.picks=d?.p||{};S.notes=d?.n||{};}catch{S.picks={};S.notes={};}}
+function clearPicks(){S.picks={};S.notes={};localStorage.removeItem(psKey());}
+
+// ── Google Sheets Write ──────────────────────────────
+async function writeRows(rows){
+  if(!S.sheetId){toast('No Sheet ID configured','err');return false;}
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${S.sheetId}/values/Sheet1!A:J:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    await sheetsApi(url,{method:'POST',body:JSON.stringify({values:rows})});
+    return true;
+  }catch(e){
+    console.error(e);
+    if(e.message==='NEEDS_GIS_AUTH'){toast('Sheets auth needed — see button below','err');return'AUTH';}
+    const q=JSON.parse(localStorage.getItem('soroi_queue')||'[]');q.push({rows,ts:Date.now()});
+    localStorage.setItem('soroi_queue',JSON.stringify(q));
+    toast('Saved offline — will retry','err');return false;
+  }
+}
+async function retryQueue(){
+  const q=JSON.parse(localStorage.getItem('soroi_queue')||'[]');if(!q.length)return;
+  const rem=[];for(const it of q){const ok=await writeRows(it.rows);if(!ok)rem.push(it);}
+  localStorage.setItem('soroi_queue',JSON.stringify(rem));
+  if(rem.length<q.length)toast(`Synced ${q.length-rem.length} queued`,'ok');
+}
+
+// ── Submit ───────────────────────────────────────────
+async function submitPickup(){
+  const all=S.groups.flatMap(g=>g.parts);
+  const marked=all.filter(p=>S.picks[p.id]).length;
+  if(!marked){toast('Mark at least one item','err');return;}
+  const uLabel=S.selUnit?S.selUnit.name:'Full Assembly';
+  modal('Checkout','Submit '+marked+' item(s) for "'+uLabel+'" to the sheet?',[
+    {label:'Cancel',cls:'mdl-cancel'},
+    {label:'Submit',cls:'mdl-ok',fn:doSubmit},
+  ]);
+}
+async function doSubmit(){
+  S.submitting=true;render();
+  const now=new Date();
+  const ds=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const ts=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const aName=S.selAssembly?.name||'';const uLabel=S.selUnit?S.selUnit.name:'Full Assembly';
+  const person=S.user?.name||S.user?.email||'Unknown';
+  const rows=[];
+  S.groups.forEach(g=>g.parts.forEach(p=>{
+    const st=S.picks[p.id];if(!st)return;
+    rows.push([person,`${ds} ${ts}`,aName,uLabel,p.name,p.part_number||'',(p.qty||1)*S.mult,st==='cart'?'Picked':'Missing',[p.fastener,p.loctite,p.torque].filter(Boolean).join(' / '),S.notes[p.id]||'']);
+  }));
+  const ok=await writeRows(rows);S.submitting=false;
+  if(ok===true){
+    S.history.unshift({date:ds+' '+ts,assembly:aName,unit:uLabel,picked:rows.filter(r=>r[7]==='Picked').length,missing:rows.filter(r=>r[7]==='Missing').length,total:rows.length});
+    localStorage.setItem('soroi_history',JSON.stringify(S.history.slice(0,50)));
+    clearPicks();toast('Pickup submitted!','ok');S.view='units';
+  }else if(ok==='AUTH'){
+    // Show auth button
+  }
+  render();
+}
+
+// ── Seed Demo ────────────────────────────────────────
+async function seedDemo(){
+  const{data:ex}=await sb.from(T.ASSEMBLIES).select('id').limit(1);
+  if(ex?.length){toast('Data exists — clear first','err');return;}
+  try{
+    const{data:a,error:e1}=await sb.from(T.ASSEMBLIES).insert({name:'CE DVT 2',description:'Compressor Engine DVT 2'}).select().single();
+    if(e1)throw e1;const aId=a.id;
+    const units=[{name:'Compressor',so:1},{name:'Right Arm',so:2},{name:'Left Arm',so:3},{name:'Torso',so:4},{name:'Head Unit',so:5}];
+    const{data:uR,error:e2}=await sb.from(T.NODES).insert(units.map(u=>({assembly_id:aId,parent_id:null,name:u.name,level:2,sort_order:u.so}))).select();
+    if(e2)throw e2;const uM={};uR.forEach(u=>uM[u.name]=u.id);
+    const subs=[
+      {p:'Compressor',n:'Motor Sub-Assy',seq:'1',so:1,parts:[
+        {name:'BLDC Motor',pn:'MOT-001',qty:1,seq:'1a',so:1},
+        {name:'Motor Mount Bracket',pn:'BRK-012',qty:1,seq:'1b',so:2,fastener:'M4×12',torque:'3.5Nm'},
+        {name:'M4×12 SHCS',pn:'FST-M4-12',qty:4,seq:'1c',so:3,fastener:'M4×12',loctite:'Blue 242'},
+        {name:'Motor Coupling',pn:'CPL-003',qty:1,seq:'1d',so:4},
+      ]},
+      {p:'Compressor',n:'Impeller Sub-Assy',seq:'2',so:2,parts:[
+        {name:'Impeller Blade',pn:'IMP-020',qty:1,seq:'2a',so:1},
+        {name:'Impeller Housing',pn:'IMP-021',qty:1,seq:'2b',so:2},
+        {name:'M6×20 SHCS',pn:'FST-M6-20',qty:6,seq:'2c',so:3,fastener:'M6×20',loctite:'Red 271',torque:'8Nm'},
+        {name:'Seal Ring',pn:'SEL-005',qty:2,seq:'2d',so:4},
+      ]},
+      {p:'Compressor',n:'Valve Assembly',seq:'3',so:3,parts:[
+        {name:'Check Valve',pn:'VLV-010',qty:2,seq:'3a',so:1},
+        {name:'Valve Seat',pn:'VLV-011',qty:2,seq:'3b',so:2},
+        {name:'Spring (valve)',pn:'SPR-003',qty:2,seq:'3c',so:3},
+        {name:'M3×8 SHCS',pn:'FST-M3-8',qty:8,seq:'3d',so:4,fastener:'M3×8',torque:'1.2Nm'},
+      ]},
+      {p:'Right Arm',n:'Shoulder Joint',seq:'1',so:1,parts:[
+        {name:'Shoulder Actuator',pn:'ACT-101',qty:1,seq:'1a',so:1},
+        {name:'Bearing',pn:'BRG-050',qty:2,seq:'1b',so:2},
+        {name:'Shoulder Plate',pn:'PLT-101',qty:1,seq:'1c',so:3},
+        {name:'M5×16 SHCS',pn:'FST-M5-16',qty:6,seq:'1d',so:4,fastener:'M5×16',loctite:'Blue 242',torque:'5Nm'},
+      ]},
+      {p:'Right Arm',n:'Gripper (TX-GHOST)',seq:'2',so:2,parts:[
+        {name:'Gripper Body',pn:'GRP-200',qty:1,seq:'2a',so:1},
+        {name:'Finger Tip L',pn:'GRP-201',qty:1,seq:'2b',so:2},
+        {name:'Finger Tip R',pn:'GRP-202',qty:1,seq:'2c',so:3},
+        {name:'Gripper PCB',pn:'PCB-GRP-01',qty:1,seq:'2d',so:4},
+        {name:'M2.5×6 SHCS',pn:'FST-M25-6',qty:8,seq:'2e',so:5,fastener:'M2.5×6',torque:'0.8Nm'},
+      ]},
+      {p:'Left Arm',n:'Shoulder Joint (L)',seq:'1',so:1,parts:[
+        {name:'Shoulder Actuator (L)',pn:'ACT-111',qty:1,seq:'1a',so:1},
+        {name:'Bearing',pn:'BRG-050',qty:2,seq:'1b',so:2},
+        {name:'M5×16 SHCS',pn:'FST-M5-16',qty:6,seq:'1c',so:3,fastener:'M5×16',loctite:'Blue 242',torque:'5Nm'},
+      ]},
+      {p:'Torso',n:'Frame Assembly',seq:'1',so:1,parts:[
+        {name:'Main Frame',pn:'FRM-001',qty:1,seq:'1a',so:1},
+        {name:'Side Panel L',pn:'PNL-010',qty:1,seq:'1b',so:2},
+        {name:'Side Panel R',pn:'PNL-011',qty:1,seq:'1c',so:3},
+        {name:'M6×25 SHCS',pn:'FST-M6-25',qty:12,seq:'1d',so:4,fastener:'M6×25',loctite:'Blue 242',torque:'10Nm'},
+      ]},
+      {p:'Torso',n:'Power Distribution',seq:'2',so:2,parts:[
+        {name:'PDU Board',pn:'PCB-PDU-01',qty:1,seq:'2a',so:1},
+        {name:'Battery Pack',pn:'BAT-048',qty:1,seq:'2b',so:2},
+        {name:'Harness (main)',pn:'HAR-001',qty:1,seq:'2c',so:3},
+      ]},
+      {p:'Head Unit',n:'Sensor Array',seq:'1',so:1,parts:[
+        {name:'Stereo Camera',pn:'CAM-100',qty:1,seq:'1a',so:1},
+        {name:'Depth Sensor',pn:'SNS-200',qty:1,seq:'1b',so:2},
+        {name:'Sensor Bracket',pn:'BRK-CAM-01',qty:1,seq:'1c',so:3,fastener:'M3×10',torque:'1.5Nm'},
+      ]},
+      {p:'Head Unit',n:'Compute Module',seq:'2',so:2,parts:[
+        {name:'Jetson Board',pn:'JET-NX-02',qty:1,seq:'2a',so:1},
+        {name:'Heatsink',pn:'HSK-010',qty:1,seq:'2b',so:2},
+        {name:'Fan 40mm',pn:'FAN-040',qty:1,seq:'2c',so:3},
+      ]},
+    ];
+    for(const s of subs){
+      const pid=uM[s.p];if(!pid)continue;
+      const{data:sr,error:e3}=await sb.from(T.NODES).insert({assembly_id:aId,parent_id:pid,name:s.n,level:3,sequence_tag:s.seq,sort_order:s.so}).select().single();
+      if(e3)throw e3;
+      const ins=s.parts.map(p=>({assembly_id:aId,parent_id:sr.id,name:p.name,part_number:p.pn,level:4,qty:p.qty||1,fastener:p.fastener||null,loctite:p.loctite||null,torque:p.torque||null,sequence_tag:p.seq,sort_order:p.so}));
+      const{error:e4}=await sb.from(T.NODES).insert(ins);if(e4)throw e4;
+    }
+    invalidateCache();toast('Demo data seeded!','ok');loadAssemblies();
+  }catch(e){console.error(e);toast('Seed failed: '+e.message,'err');}
+}
+async function clearData(){
+  modal('Clear All Data','Delete all assemblies and BOM nodes?',[
+    {label:'Cancel',cls:'mdl-cancel'},
+    {label:'Delete All',cls:'mdl-danger',fn:async()=>{
+      try{await sb.from(T.NODES).delete().neq('id','00000000-0000-0000-0000-000000000000');await sb.from(T.ASSEMBLIES).delete().neq('id','00000000-0000-0000-0000-000000000000');invalidateCache();S.assemblies=[];toast('Cleared','ok');render();}catch(e){toast(e.message,'err');}
+    }},
+  ]);
+}
+
+// ── Nav ──────────────────────────────────────────────
+function nav(v){S.view=v;render();}
+function goBack(){
+  switch(S.view){
+    case'units':S.selAssembly=null;nav('assemblies');break;
+    case'pickup':S.filter='all';nav('units');break;
+    case'history':nav('units');break;
+    default:nav('assemblies');
+  }
+}
+
+// ── Render ───────────────────────────────────────────
+function render(){
+  const app=$('app');
+  switch(S.view){
+    case'loading':app.innerHTML='<div class="loading-c" style="min-height:100dvh;justify-content:center"><div class="spin"></div>Loading...</div>';break;
+    case'login':app.innerHTML=rLogin();break;
+    case'assemblies':app.innerHTML=rAssemblies();break;
+    case'units':app.innerHTML=rUnits();break;
+    case'pickup':app.innerHTML=rPickup();break;
+    case'history':app.innerHTML=rHistory();break;
+  }
+  bind();
+}
+
+// ── Login View ───────────────────────────────────────
+function rLogin(){return`
+  <div class="login">
+    <div class="login-bag">${svg('cart')}</div>
+    <div class="login-brand"><span>揃い</span> Soroi</div>
+    <div class="login-jp">A Complete Set — Shop Floor Pickup</div>
+    <div class="login-sub">Sign in to start your pickup shopping list</div>
+    <button class="login-btn" onclick="doLogin()">${GLOGO} Sign in with Google</button>
+    <p class="login-error" id="login-error"></p>
+  </div>`;}
+
+// ── Assemblies View ──────────────────────────────────
+function rAssemblies(){
+  const emojis=['🔧','🦾','🏗️','⚙️','🔩'];
+  return`${rHdr('揃い Soroi','Shop Floor Pickup',false,true)}
+  <div class="content fade">
+    <div class="section-title">Your Assemblies</div>
+    <div class="section-sub">Choose an assembly to start shopping</div>
+    <div class="cards">
+      ${!S.assemblies.length?'<div class="loading-c">No assemblies yet — seed demo data below</div>':
+      S.assemblies.map((a,i)=>`
+        <div class="card" data-act="sel-assy" data-id="${a.id}">
+          <div class="card-ico" style="background:var(--brand-lt)">${emojis[i%emojis.length]}</div>
+          <div class="card-body"><div class="card-name">${esc(a.name)}</div><div class="card-detail">${esc(a.description||'')}</div></div>
+          <div class="card-arrow">${svg('chev')}</div>
+        </div>`).join('')}
+    </div>
+    <div class="admin">
+      <h3>⚙️ Admin Panel</h3>
+      <button class="abtn" onclick="seedDemo()">Seed Demo Data</button>
+      <button class="abtn danger" onclick="clearData()">Clear All Data</button>
+      <button class="abtn" onclick="retryQueue()">Retry Queued (${JSON.parse(localStorage.getItem('soroi_queue')||'[]').length})</button>
+      <div style="margin-top:10px">
+        <label style="font-size:.75rem;color:var(--text-3);display:block;margin-bottom:4px">Google Sheet ID</label>
+        <input type="text" value="${S.sheetId}" placeholder="Sheet ID" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem" onchange="S.sheetId=this.value;localStorage.setItem('soroi_sheet_id',this.value)">
+      </div>
+      <div class="admin-note">Queued writes: ${JSON.parse(localStorage.getItem('soroi_queue')||'[]').length}</div>
+    </div>
+  </div>`;}
+
+// ── Units View (Shopping Aisles) ─────────────────────
+function rUnits(){
+  const a=S.selAssembly;if(!a)return'';
+  const nodes=JSON.parse(localStorage.getItem('soroi_nodes_'+a.id)||'[]');
+  const units=getUnits(nodes);const total=nodes.filter(n=>n.level>=4).length;
+  const uEmoji={'Compressor':'🔧','Right Arm':'🦾','Left Arm':'🦾','Torso':'🏗️','Head Unit':'🧠'};
+  return`${rHdr(a.name,'Select what to pick',true,true)}
+  <div class="content fade">
+    <div class="section-title">Shopping Aisles</div>
+    <div class="section-sub">Pick a unit or grab the full set</div>
+    <div class="cards">
+      <div class="card card-all" data-act="sel-unit" data-id="all">
+        <div class="card-ico">🛒</div>
+        <div class="card-body"><div class="card-name">Full Assembly</div><div class="card-detail">${total} items across ${units.length} aisles</div></div>
+        <div class="card-arrow">${svg('chev')}</div>
+      </div>
+      ${units.map(u=>`
+        <div class="card" data-act="sel-unit" data-id="${u.id}">
+          <div class="card-ico" style="background:var(--warm)">${uEmoji[u.name]||'📦'}</div>
+          <div class="card-body"><div class="card-name">${esc(u.name)}</div><div class="card-detail">${countParts(nodes,u.id)} items</div></div>
+          <div class="card-arrow">${svg('chev')}</div>
+        </div>`).join('')}
+      <div class="card" data-act="history" style="border-style:dashed;margin-top:8px">
+        <div class="card-ico" style="background:var(--warm);font-size:1.1rem">🧾</div>
+        <div class="card-body"><div class="card-name" style="color:var(--text-2)">Past Receipts</div><div class="card-detail">View pickup history</div></div>
+        <div class="card-arrow">${svg('chev')}</div>
+      </div>
+    </div>
+  </div>`;}
+
+// ── Pickup View (Shopping List) ──────────────────────
+function rPickup(){
+  const a=S.selAssembly;const uLabel=S.selUnit?S.selUnit.name:'Full Assembly';
+  const all=S.groups.flatMap(g=>g.parts);const tot=all.length;
+  const cart=all.filter(p=>S.picks[p.id]==='cart').length;
+  const miss=all.filter(p=>S.picks[p.id]==='miss').length;
+  const rem=tot-cart-miss;
+  const ff={all:()=>true,remaining:p=>!S.picks[p.id],cart:p=>S.picks[p.id]==='cart',miss:p=>S.picks[p.id]==='miss'}[S.filter]||(()=>true);
+
+  return`${rHdr(uLabel,'Shopping list',true,false)}
+  <div class="content fade" style="padding-bottom:80px">
+    <div class="meta-bar">
+      <span>${svg('box')} ${esc(a?.name||'')}</span>
+      <span>${svg('user')} ${esc(S.user?.name||'')}</span>
+      <span>${svg('cal')} ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span>
+    </div>
+    <div class="mult-bar">
+      <label>Units ×</label>
+      <input type="number" id="multIn" value="${S.mult}" min="1" max="99" onchange="S.mult=Math.max(1,parseInt(this.value)||1);render()">
+      <div class="mult-hint">Multiply all quantities</div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-top"><span>${cart+miss} of ${tot} items</span><span>${tot?Math.round((cart+miss)/tot*100):0}%</span></div>
+      <div class="prog-track">
+        <div class="prog-fill-cart" style="width:${tot?(cart/tot*100):0}%"></div>
+        <div class="prog-fill-miss" style="left:${tot?(cart/tot*100):0}%;width:${tot?(miss/tot*100):0}%"></div>
+      </div>
+      <div class="prog-nums">
+        <span class="n-cart">🛒 ${cart} in cart</span>
+        <span class="n-miss">⚠️ ${miss} missing</span>
+        <span class="n-rem">${rem} remaining</span>
+      </div>
+    </div>
+    <div class="filters">
+      <button class="ftab ${S.filter==='all'?'active':''}" data-flt="all">All <span class="cnt">${tot}</span></button>
+      <button class="ftab ${S.filter==='remaining'?'active':''}" data-flt="remaining">Remaining <span class="cnt">${rem}</span></button>
+      <button class="ftab ${S.filter==='cart'?'active':''}" data-flt="cart">In Cart <span class="cnt">${cart}</span></button>
+      <button class="ftab ${S.filter==='miss'?'active':''}" data-flt="miss">Missing <span class="cnt">${miss}</span></button>
+    </div>
+    ${S.groups.map(g=>{
+      const gp=g.parts,gc=gp.filter(p=>S.picks[p.id]==='cart').length,gm=gp.filter(p=>S.picks[p.id]==='miss').length;
+      const vis=gp.filter(ff);if(!vis.length)return'';
+      return`<div class="grp">
+        <div class="grp-hdr">
+          ${g.header?.sequence_tag?`<span class="grp-seq">#${esc(g.header.sequence_tag)}</span>`:''}
+          <span class="grp-name">${esc(g.header?.name||g.unitName||'Parts')}</span>
+          <span class="grp-count">${gc+gm}/${gp.length}</span>
+          ${g.unitName?`<span class="grp-unit">${esc(g.unitName)}</span>`:''}
+        </div>
+        ${gp.map(p=>{
+          const ps=S.picks[p.id]||'';const v=ff(p);
+          return`<div class="prow ${ps==='cart'?'in-cart':ps==='miss'?'missing':''} ${v?'':'filt-out'}" data-pid="${p.id}">
+            <div class="prow-btns">
+              <button class="pbtn cart-btn ${ps==='cart'?'on':''}" data-do="cart" data-id="${p.id}" title="Add to cart">${svg('check')}</button>
+              <button class="pbtn miss-btn ${ps==='miss'?'on':''}" data-do="miss" data-id="${p.id}" title="Missing">${svg('x')}</button>
+            </div>
+            ${p.sequence_tag?`<span class="prow-seq">${esc(p.sequence_tag)}</span>`:''}
+            <div class="prow-body">
+              <div class="prow-name">${esc(p.name)}</div>
+              ${p.part_number?`<div class="prow-pn">${esc(p.part_number)}</div>`:''}
+              <div class="prow-pills">
+                ${p.fastener?`<span class="pill pill-f">${esc(p.fastener)}</span>`:''}
+                ${p.loctite?`<span class="pill pill-l">${esc(p.loctite)}</span>`:''}
+                ${p.torque?`<span class="pill pill-t">${esc(p.torque)}</span>`:''}
+              </div>
+              <input class="prow-note" type="text" placeholder="Add note…" value="${esc(S.notes[p.id]||'')}" data-do="note" data-id="${p.id}">
+            </div>
+            <div class="prow-qty">${(p.qty||1)*S.mult}</div>
+          </div>`;}).join('')}
+      </div>`;}).join('')}
+  </div>
+  <div class="checkout">
+    <button class="ckout-btn ckout-secondary" onclick="modal('Reset','Clear all picks?',[{label:'Cancel',cls:'mdl-cancel'},{label:'Reset',cls:'mdl-danger',fn:()=>{clearPicks();render();}}])">Reset</button>
+    <button class="ckout-btn ckout-primary" onclick="submitPickup()" ${S.submitting?'disabled':''}>
+      ${S.submitting?'<div class="spin" style="width:18px;height:18px;border-width:2px"></div>':svg('send')}
+      ${S.submitting?'Submitting…':`Checkout (${cart+miss})`}
+    </button>
+    ${!sheetsToken?`<button class="ckout-btn ckout-secondary" onclick="gisRequestToken()" style="flex:0;padding:13px 16px;font-size:.78rem">🔑 Sheets</button>`:''}
+  </div>`;}
+
+// ── History View ─────────────────────────────────────
+function rHistory(){
+  return`${rHdr('Past Receipts','Pickup history',true,false)}
+  <div class="content fade">
+    ${!S.history.length?'<div class="loading-c">No receipts yet</div>':
+    S.history.map(h=>`
+      <div class="hist-row">
+        <div class="hist-top"><span class="hist-unit">${esc(h.unit)}</span><span class="hist-date">${esc(h.date)}</span></div>
+        <div class="hist-stats">
+          <span>${esc(h.assembly)}</span>
+          <span class="s-cart">🛒 ${h.picked}</span>
+          <span class="s-miss">⚠️ ${h.missing}</span>
+        </div>
+      </div>`).join('')}
+  </div>`;}
+
+// ── Header ───────────────────────────────────────────
+function rHdr(title,sub,back,showUser){
+  return`<div class="hdr">
+    ${back?`<button class="hdr-back" onclick="goBack()">${svg('back')}</button>`:''}
+    <div class="hdr-body"><div class="hdr-title">${esc(title)}</div>${sub?`<div class="hdr-sub">${esc(sub)}</div>`:''}</div>
+    ${showUser&&S.user?`<div class="hdr-user"><span class="hdr-name">${esc(S.user.name.split(' ')[0])}</span>
+      <button onclick="doLogout()" style="font-size:.7rem;opacity:.6;text-decoration:underline">Logout</button></div>`:''}
+  </div>`;}
+
+// ── Event Binding ────────────────────────────────────
+function bind(){
+  document.querySelectorAll('[data-act="sel-assy"]').forEach(el=>el.onclick=async()=>{
+    S.selAssembly=S.assemblies.find(a=>a.id===el.dataset.id);nav('units');await loadNodes(el.dataset.id);render();
+  });
+  document.querySelectorAll('[data-act="sel-unit"]').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.id;const nodes=JSON.parse(localStorage.getItem('soroi_nodes_'+S.selAssembly.id)||'[]');
+    if(id==='all'){S.selUnit=null;S.groups=groupsForAll(nodes);}
+    else{S.selUnit=nodes.find(n=>n.id===id);S.groups=groupsForUnit(nodes,id);}
+    S.filter='all';S.mult=1;loadPicks();nav('pickup');
+  });
+  document.querySelectorAll('[data-act="history"]').forEach(el=>el.onclick=()=>nav('history'));
+  document.querySelectorAll('[data-do="cart"]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();const id=el.dataset.id;
+    S.picks[id]=S.picks[id]==='cart'?undefined:'cart';if(!S.picks[id])delete S.picks[id];savePicks();render();
+  });
+  document.querySelectorAll('[data-do="miss"]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();const id=el.dataset.id;
+    S.picks[id]=S.picks[id]==='miss'?undefined:'miss';if(!S.picks[id])delete S.picks[id];savePicks();render();
+  });
+  document.querySelectorAll('[data-do="note"]').forEach(el=>el.oninput=()=>{S.notes[el.dataset.id]=el.value;savePicks();});
+  document.querySelectorAll('[data-flt]').forEach(el=>el.onclick=()=>{S.filter=el.dataset.flt;render();});
+}
+</script>
+</body>
+</html>
